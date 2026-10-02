@@ -26,7 +26,7 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 
 from airflow import settings
-from airflow.providers.edge3.models.edge_job import EdgeJobModel
+from airflow.providers.edge3.models.edge_base import edge_metadata
 from airflow.utils.db_manager import RunDBManager
 
 from tests_common.test_utils.config import conf_vars
@@ -38,9 +38,13 @@ pytestmark = [pytest.mark.db_test]
 def legacy_edge_job_table():
     migration = import_module("airflow.providers.edge3.migrations.versions.0001_3_0_0_create_edge_tables")
     with settings.engine.begin() as connection:
-        EdgeJobModel.__table__.drop(connection)
+        edge_metadata.drop_all(connection)
         with Operations.context(MigrationContext.configure(connection)):
             migration.upgrade()
+    yield
+    with settings.engine.begin() as connection:
+        edge_metadata.drop_all(connection)
+        edge_metadata.create_all(connection)
 
 
 class TestEdgeDBManager:
